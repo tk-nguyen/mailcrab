@@ -37,15 +37,20 @@ fn get_env_port(name: &'static str, default: u16) -> u16 {
         .unwrap_or(default)
 }
 
-fn load_index() -> Option<String> {
+fn load_index(prefix: String) -> Option<String> {
     let index: EmbeddedFile = Asset::get("index.html")?;
     let index = String::from_utf8(index.data.to_vec()).ok()?;
+
+    let replace = match prefix == "/" {
+        true => "",
+        false => prefix.as_str()
+    };
 
     // remove slash from start of asset includes, so they are loaded by relative path
     Some(
         index
-            .replace("href=\"/", "href=\"./static/")
-            .replace("'/mailcrab-frontend", "'./static/mailcrab-frontend"),
+            .replace(r#"href="/"#, format!(r#"href="{replace}/static/"#).as_str())
+            .replace("'/mailcrab-frontend", format!("'{replace}/static/mailcrab-frontend").as_str()),
     )
 }
 
@@ -129,7 +134,7 @@ async fn main() {
     let app_state = Arc::new(AppState {
         rx,
         storage: Default::default(),
-        index: load_index(),
+        index: load_index(prefix.clone()),
         prefix,
     });
 
